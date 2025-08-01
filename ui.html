@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 12px;
+      color: #333;
+      background: #fff;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #000;
+    }
+
+    .mode-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #e0e0e0;
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .mode-btn:hover {
+      background: #f5f5f5;
+    }
+
+    .mode-btn.active {
+      background: #000;
+      color: #fff;
+      border-color: #000;
+    }
+
+    .mode-icon {
+      font-size: 14px;
+      margin-right: 4px;
+    }
+
+    .status-message {
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .status-message.info {
+      background: #e3f2fd;
+      color: #1565c0;
+      border: 1px solid #bbdefb;
+    }
+
+    .status-message.warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    .status-message.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ffcdd2;
+    }
+
+    .status-message.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #c8e6c9;
+    }
+
+    .mappings-container {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .mappings-header {
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #666;
+    }
+
+    .mapping-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      font-size: 11px;
+      position: relative;
+    }
+
+    .mapping-item.duplicate {
+      border-color: #f44336;
+      background: #ffebee;
+    }
+
+    .mapping-arrow {
+      margin: 0 12px;
+      color: #666;
+      flex-shrink: 0;
+    }
+
+    .mapping-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mapping-key {
+      font-family: monospace;
+      font-size: 11px;
+      color: #333;
+      word-break: break-all;
+    }
+
+    .mapping-name {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 10px;
+      color: #666;
+      margin-left: 4px;
+    }
+
+    .delete-btn {
+      position: absolute;
+      right: -15px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+      line-height: 1;
+    }
+
+    .delete-btn:hover {
+      color: #f44336;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #999;
+      padding: 24px;
+      font-size: 11px;
+    }
+
+    .actions-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: 1px solid #e0e0e0;
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: #f5f5f5;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn.primary {
+      background: #0066ff;
+      color: #fff;
+      border-color: #0066ff;
+    }
+
+    .btn.primary:hover {
+      background: #0052cc;
+    }
+
+    .btn.danger {
+      color: #f44336;
+      border-color: #f44336;
+    }
+
+    .btn.danger:hover {
+      background: #ffebee;
+    }
+
+    .manual-input {
+      display: none;
+      margin-top: 12px;
+      padding: 12px;
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+    }
+
+    .manual-input.active {
+      display: block;
+    }
+
+    .manual-input textarea {
+      width: 100%;
+      min-height: 60px;
+      padding: 8px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      resize: vertical;
+      margin-bottom: 8px;
+    }
+
+    .manual-input .hint {
+      font-size: 10px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e0e0e0;
+      margin: 16px 0;
+    }
+
+    .notes-input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 200px;
+      background-color: #333;
+      color: #fff;
+      text-align: left;
+      border-radius: 6px;
+      padding: 8px;
+      position: fixed;
+      z-index: 10000;
+      font-size: 11px;
+      line-height: 1.4;
+      opacity: 0;
+      transition: opacity 0.3s;
+      white-space: normal;
+      word-wrap: break-word;
+      pointer-events: none;
+    }
+
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .collecting-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #4caf50;
+      color: white;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-left: 8px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    .cancel-btn {
+      margin-left: 8px;
+      padding: 2px 8px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .cancel-btn:hover {
+      background: #d32f2f;
+    }
+
+    .welcome-state {
+      padding: 24px 0;
+      text-align: center;
+    }
+
+    .welcome-message h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #000;
+    }
+
+    .welcome-message p {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    .previous-migrations {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .previous-migrations p {
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .welcome-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .start-mapping {
+      margin-top: 16px;
+    }
+
+    .start-mapping p {
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .mappings-actions {
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .btn.small {
+      padding: 6px 12px;
+      font-size: 11px;
+    }
+
+    .copy-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .copy-modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .copy-modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 90%;
+      max-height: 80%;
+      overflow: auto;
+    }
+
+    .copy-modal-header {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .copy-modal textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 8px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      resize: vertical;
+      margin-bottom: 12px;
+    }
+
+    .copy-modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Welcome State -->
+  <div id="welcomeState" class="welcome-state">
+    <div class="welcome-message">
+      <h2>Component key migration mapper</h2>
+      <p>Select one or more components in your design to start mapping replacements.</p>
+    </div>
+    <div id="previousMigrations" class="previous-migrations">
+      <p>Found <span id="migrationCount" class="tooltip">
+        <strong>0 migrations</strong>
+        <span class="tooltiptext" id="migrationTooltip"></span>
+      </span> from your previous session</p>
+      <div class="welcome-actions">
+        <button class="btn primary" onclick="continuePrevious()">Continue</button>
+        <button class="btn" onclick="startFresh()">Start Fresh</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Main UI (hidden initially) -->
+  <div id="mainUI" style="display: none;">
+
+    <div id="statusMessage" class="status-message info">
+      Select components to start mapping
+    </div>
+
+    <div class="mappings-container">
+      <div class="mappings-header">
+        Your Migrations
+        <span id="collectingBadge" class="collecting-badge" style="display: none;">Collecting...</span>
+      </div>
+      <div id="mappingsList">
+        <div class="empty-state">No mappings yet. Start by selecting components!</div>
+      </div>
+      <div class="mappings-actions">
+        <button class="btn small" onclick="copyOldKeys()">📋 Copy Old Keys</button>
+        <button class="btn small" onclick="copyNewKeys()">📋 Copy New Keys</button>
+      </div>
+    </div>
+
+    <div class="actions-container">
+      <button class="btn" id="copyKeyBtn" onclick="copySelectedKey()" style="display: none;">📋 Copy Selected Key</button>
+      <button class="btn" onclick="toggleManualInput()">📝 Paste Keys Manually</button>
+      <button class="btn" id="generateVisualsBtn" onclick="generateVisuals()" style="display: none;">🎨 Generate Visuals</button>
+    </div>
+
+    <div id="manualInput" class="manual-input">
+      <div class="hint">Paste component keys to create mappings</div>
+      <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+        <div style="flex: 1;">
+          <label style="font-size: 11px; color: #666; display: block; margin-bottom: 4px;">OLD Keys (one per line)</label>
+          <textarea id="oldKeysInput" placeholder="9972626c680771286658
+3f35be7a6bc135782bd3" style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; font-family: monospace; font-size: 11px; resize: vertical;"></textarea>
+        </div>
+        <div style="flex: 1;">
+          <label style="font-size: 11px; color: #666; display: block; margin-bottom: 4px;">NEW Keys (one per line)</label>
+          <textarea id="newKeysInput" placeholder="b6daa2898c910984a846
+efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; font-family: monospace; font-size: 11px; resize: vertical;"></textarea>
+        </div>
+      </div>
+      <div class="hint" style="margin-bottom: 8px;">Keys will be paired in order (first old → first new, etc.)</div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn primary" onclick="processManualKeys()">Add Mappings</button>
+        <button class="btn" onclick="toggleManualInput()">Cancel</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="actions-container">
+      <button class="btn primary" onclick="exportCSV()" id="exportBtn">Export CSV</button>
+      <button class="btn danger" onclick="clearAll()" id="clearBtn">Clear All</button>
+    </div>
+  </div>
+
+  <!-- Copy Modal -->
+  <div id="copyModal" class="copy-modal">
+    <div class="copy-modal-content">
+      <div class="copy-modal-header">Copy the text below:</div>
+      <textarea id="copyTextArea" readonly></textarea>
+      <div class="copy-modal-actions">
+        <button class="btn" onclick="selectAllText()">Select All</button>
+        <button class="btn primary" onclick="closeCopyModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global variables
+    let mappings = [];
+    let collectingState = {
+      active: false,
+      mode: null,
+      oldKeys: [],
+      newKey: null,
+      oldNames: [],
+      newName: null
+    };
+    let isMainUIVisible = false;
+    let currentSelection = [];
+
+    // Load saved mappings on startup
+    window.onload = () => {
+      console.log('UI loaded, requesting initial data...');
+      parent.postMessage({ pluginMessage: { type: 'loadMappings' } }, '*');
+      setTimeout(() => {
+        parent.postMessage({ pluginMessage: { type: 'getInitialSelection' } }, '*');
+      }, 100);
+    };
+
+    function isDataExpired(timestamp) {
+      if (!timestamp) return true;
+      const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+      return Date.now() - timestamp > twoWeeks;
+    }
+
+    function showWelcomeState() {
+      document.getElementById('welcomeState').style.display = 'block';
+      document.getElementById('mainUI').style.display = 'none';
+      isMainUIVisible = false;
+    }
+
+    function showMainUI() {
+      document.getElementById('welcomeState').style.display = 'none';
+      document.getElementById('mainUI').style.display = 'block';
+      isMainUIVisible = true;
+      updateStatus();
+    }
+
+    function startMappingMode() {
+      showMainUI();
+    }
+
+    function continuePrevious() {
+      showMainUI();
+      renderMappings();
+    }
+
+    function startFresh() {
+      mappings = [];
+      saveMappings();
+      showMainUI();
+      renderMappings();
+    }
+
+
+
+    function resetCollectingState() {
+      collectingState = {
+        active: false,
+        mode: null,
+        oldKeys: [],
+        newKey: null,
+        oldNames: [],
+        newName: null
+      };
+      document.getElementById('collectingBadge').style.display = 'none';
+    }
+
+    function updateStatus() {
+      const statusEl = document.getElementById('statusMessage');
+      
+      if (collectingState.active) {
+        if (!collectingState.oldKeys.length) {
+          statusEl.className = 'status-message info';
+          statusEl.innerHTML = 'Select the OLD component to replace';
+        } else {
+          statusEl.className = 'status-message info';
+          statusEl.innerHTML = 'Now select the replacement component <button class="cancel-btn" onclick="cancelSelection()">Cancel</button>';
+        }
+      } else {
+        // Check if components are selected when not in collecting state
+        if (currentSelection.length > 0) {
+          const selectedComponent = currentSelection[0];
+          const isAlreadyMapped = mappings.some(m => m.oldKey === selectedComponent.key);
+          
+          if (isAlreadyMapped) {
+            // Extract clean component name (remove variant info)
+            const cleanName = selectedComponent.name.split('|')[0];
+            statusEl.className = 'status-message success';
+            statusEl.innerHTML = `<strong>${cleanName}</strong> has been added. Make a new selection to continue mapping`;
+          } else {
+            statusEl.className = 'status-message info';
+            statusEl.innerHTML = `First, select the OLD component, or <a href="#" onclick="useSelectedAsOld()" style="color: #0066ff; text-decoration: underline;">use current selection</a>`;
+          }
+        } else {
+          statusEl.className = 'status-message info';
+          statusEl.innerHTML = 'First, select the OLD component';
+        }
+      }
+    }
+
+    function renderMappings() {
+      const container = document.getElementById('mappingsList');
+      const generateBtn = document.getElementById('generateVisualsBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const exportBtn = document.getElementById('exportBtn');
+      const copyOldBtn = document.querySelector('.mappings-actions button[onclick="copyOldKeys()"]');
+      const copyNewBtn = document.querySelector('.mappings-actions button[onclick="copyNewKeys()"]');
+      
+      if (mappings.length === 0) {
+        container.innerHTML = '<div class="empty-state">No mappings yet. Start by selecting components!</div>';
+        // Only hide the copy buttons when there are no mappings
+        if (copyOldBtn) copyOldBtn.style.display = 'none';
+        if (copyNewBtn) copyNewBtn.style.display = 'none';
+        return;
+      }
+
+      // Show copy buttons when there are mappings
+      if (copyOldBtn) copyOldBtn.style.display = 'inline-block';
+      if (copyNewBtn) copyNewBtn.style.display = 'inline-block';
+      
+      container.innerHTML = mappings.map((mapping, index) => {
+        const isDuplicate = mapping.oldKey === mapping.newKey;
+        
+        // Extract clean name and variant props
+        const oldParts = (mapping.oldName || 'Component').split('|');
+        const oldCleanName = oldParts[0];
+        const oldVariants = oldParts[1] || '';
+        
+        const newParts = (mapping.newName || 'Component').split('|');
+        const newCleanName = newParts[0];
+        const newVariants = newParts[1] || '';
+        
+        return `
+          <div class="mapping-item ${isDuplicate ? 'duplicate' : ''}">
+            <div class="mapping-info">
+              <span class="mapping-key tooltip">${mapping.oldKey}
+                ${oldVariants ? `<span class="tooltiptext">${oldVariants}</span>` : ''}
+              </span>
+              <span class="mapping-name">(${oldCleanName})</span>
+            </div>
+            <span class="mapping-arrow">→</span>
+            <div class="mapping-info">
+              <span class="mapping-key tooltip">${mapping.newKey}
+                ${newVariants ? `<span class="tooltiptext">${newVariants}</span>` : ''}
+              </span>
+              <span class="mapping-name">(${newCleanName})</span>
+            </div>
+            <button class="delete-btn" onclick="removeMapping(${index})" title="Remove mapping">×</button>
+          </div>
+        `;
+      }).join('');
+
+      // Position tooltips after rendering
+      setTimeout(() => {
+        const tooltips = container.querySelectorAll('.tooltip');
+        tooltips.forEach(tooltip => {
+          if (tooltip.querySelector('.tooltiptext')) {
+            positionTooltip(tooltip);
+          }
+        });
+      }, 50);
+
+      const hasDuplicates = mappings.some(m => m.oldKey === m.newKey);
+      if (hasDuplicates) {
+        const statusEl = document.getElementById('statusMessage');
+        statusEl.className = 'status-message warning';
+        statusEl.innerHTML = '⚠️ Warning: Some mappings have identical OLD and NEW keys!';
+      }
+    }
+
+    function addMapping(oldKey, newKey, oldName = '', newName = '') {
+      const existing = mappings.find(m => m.oldKey === oldKey);
+      if (existing) {
+        const statusEl = document.getElementById('statusMessage');
+        statusEl.className = 'status-message warning';
+        statusEl.innerHTML = `⚠️ "${oldName || oldKey}" is already mapped. Removed previous mapping.`;
+        mappings = mappings.filter(m => m.oldKey !== oldKey);
+      }
+
+      mappings.push({ oldKey, newKey, oldName, newName, notes: '' });
+      renderMappings();
+      saveMappings();
+    }
+
+    function showMappingSuccess(oldNames, newName) {
+      console.log('showMappingSuccess called with:', oldNames, newName);
+      
+      const cleanOldNames = oldNames.map(name => name.split('|')[0]);
+      const cleanNewName = newName.split('|')[0];
+      
+      let oldNamesText;
+      if (cleanOldNames.length === 1) {
+        oldNamesText = cleanOldNames[0];
+      } else {
+        oldNamesText = cleanOldNames.join(', ');
+      }
+      
+      console.log('Success message text:', `${oldNamesText} mapped to ${cleanNewName}`);
+      
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.className = 'status-message success';
+      statusEl.innerHTML = `<strong>${oldNamesText}</strong> mapped to <strong>${cleanNewName}</strong>`;
+      
+      // Send message to Figma for toast notification
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'message',
+          text: `${oldNamesText} mapped to ${cleanNewName}`,
+          variant: 'success',
+          timeout: 3000
+        } 
+      }, '*');
+      
+      console.log('Success message sent to Figma');
+      
+      // Reset to default message after 3 seconds
+      setTimeout(() => {
+        updateStatus();
+      }, 3000);
+    }
+
+    function removeMapping(index) {
+      mappings.splice(index, 1);
+      renderMappings();
+      saveMappings();
+      updateStatus();
+    }
+
+    function copyOldKeys() {
+      if (mappings.length === 0) return;
+      const oldKeys = mappings.map(m => m.oldKey).join(',');
+      showCopyModal(oldKeys, 'Old Keys - Copy to clipboard:');
+    }
+
+    function copyNewKeys() {
+      if (mappings.length === 0) return;
+      const newKeys = mappings.map(m => m.newKey).join(',');
+      showCopyModal(newKeys, 'New Keys - Copy to clipboard:');
+    }
+
+    function saveMappings() {
+      const dataToSave = {
+        mappings: mappings,
+        timestamp: Date.now()
+      };
+      parent.postMessage({ 
+        pluginMessage: { type: 'saveMappings', data: dataToSave } 
+      }, '*');
+    }
+
+    function showCopyModal(text, title = 'Copy the text below:') {
+      const modal = document.getElementById('copyModal');
+      const textarea = document.getElementById('copyTextArea');
+      const header = modal.querySelector('.copy-modal-header');
+      
+      header.textContent = title;
+      textarea.value = text;
+      modal.classList.add('active');
+      
+      setTimeout(() => {
+        textarea.select();
+        textarea.focus();
+      }, 100);
+    }
+
+    function closeCopyModal() {
+      document.getElementById('copyModal').classList.remove('active');
+    }
+
+    function selectAllText() {
+      const textarea = document.getElementById('copyTextArea');
+      textarea.select();
+      textarea.focus();
+    }
+
+    function copySelectedKey() {
+      parent.postMessage({ pluginMessage: { type: 'copySelectedKey' } }, '*');
+    }
+
+    function toggleManualInput() {
+      const input = document.getElementById('manualInput');
+      input.classList.toggle('active');
+      if (input.classList.contains('active')) {
+        document.getElementById('manualKeyInput').focus();
+      }
+    }
+
+    function processManualKeys() {
+      const oldKeysInput = document.getElementById('oldKeysInput').value.trim();
+      const newKeysInput = document.getElementById('newKeysInput').value.trim();
+      
+      if (!oldKeysInput || !newKeysInput) {
+        const statusEl = document.getElementById('statusMessage');
+        statusEl.className = 'status-message error';
+        statusEl.innerHTML = 'Please provide both OLD and NEW keys';
+        setTimeout(updateStatus, 2000);
+        return;
+      }
+
+      const oldKeys = oldKeysInput.split('\n').filter(line => line.trim());
+      const newKeys = newKeysInput.split('\n').filter(line => line.trim());
+      
+      if (oldKeys.length !== newKeys.length) {
+        const statusEl = document.getElementById('statusMessage');
+        statusEl.className = 'status-message warning';
+        statusEl.innerHTML = `Warning: Different number of OLD (${oldKeys.length}) and NEW (${newKeys.length}) keys. Will map as many as possible.`;
+      }
+      
+      const numMappings = Math.min(oldKeys.length, newKeys.length);
+      for (let i = 0; i < numMappings; i++) {
+        addMapping(oldKeys[i].trim(), newKeys[i].trim());
+      }
+
+      document.getElementById('oldKeysInput').value = '';
+      document.getElementById('newKeysInput').value = '';
+      toggleManualInput();
+      
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.className = 'status-message info';
+      statusEl.innerHTML = `Added ${numMappings} mapping${numMappings !== 1 ? 's' : ''}`;
+      setTimeout(updateStatus, 2000);
+    }
+
+    function exportCSV() {
+      if (mappings.length === 0) return;
+      const csv = mappings.map(m => 
+        `${m.oldKey},${m.newKey},${m.notes || ''}`
+      ).join('\n');
+      const filename = `component-migration-${new Date().toISOString().split('T')[0]}.csv`;
+      showCopyModal(csv, `CSV Export - Save as: ${filename}`);
+    }
+
+    function clearAll() {
+      if (mappings.length === 0) return;
+      if (confirm('Are you sure you want to clear all mappings?')) {
+        mappings = [];
+        renderMappings();
+        saveMappings();
+        updateStatus();
+      }
+    }
+
+    function generateVisuals() {
+      parent.postMessage({ 
+        pluginMessage: { type: 'generateVisuals', mappings } 
+      }, '*');
+    }
+
+    function finishBulkSelection() {
+      if (collectingState.active && currentMode === 'bulk' && collectingState.oldKeys.length > 0) {
+        collectingState.oldKeys.forEach((oldKey, index) => {
+          addMapping(oldKey, collectingState.newKey, collectingState.oldNames[index] || '', collectingState.newName);
+        });
+        resetCollectingState();
+        updateStatus();
+      }
+    }
+
+    function cancelSelection() {
+      resetCollectingState();
+      updateStatus();
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.className = 'status-message info';
+      statusEl.innerHTML = 'Selection cancelled. Start over by selecting a component.';
+      setTimeout(updateStatus, 2000);
+    }
+
+    function useSelectedAsOld() {
+      if (currentSelection.length === 0) return;
+      
+      // Check if any selected component is already mapped as OLD
+      const alreadyMappedAsOld = currentSelection.find(comp => 
+        mappings.some(m => m.oldKey === comp.key)
+      );
+      
+      if (alreadyMappedAsOld) {
+        const cleanName = alreadyMappedAsOld.name.split('|')[0];
+        const statusEl = document.getElementById('statusMessage');
+        statusEl.className = 'status-message success';
+        statusEl.innerHTML = `<strong>${cleanName}</strong> has been added. Make a new selection to continue mapping`;
+        return;
+      }
+      
+      // Check if any selected component is already used as NEW (prevent circular mapping)
+      const alreadyUsedAsNew = currentSelection.find(comp => 
+        mappings.some(m => m.newKey === comp.key)
+      );
+      
+      if (alreadyUsedAsNew) {
+        const cleanName = alreadyUsedAsNew.name.split('|')[0];
+        const statusEl = document.getElementById('statusMessage');
+        statusEl.className = 'status-message error';
+        statusEl.innerHTML = `Oops, <strong>${cleanName}</strong> is already mapped. Please select a different component.`;
+        return;
+      }
+      
+      // Start collecting state with all selected components as OLD
+      collectingState.active = true;
+      collectingState.oldKeys = currentSelection.map(comp => comp.key);
+      collectingState.oldNames = currentSelection.map(comp => comp.name);
+      document.getElementById('collectingBadge').style.display = 'inline-block';
+      updateStatus();
+    }
+
+    // Simple tooltip positioning - center at top of migrations box
+    function positionTooltip(tooltipElement) {
+      const tooltip = tooltipElement.querySelector('.tooltiptext');
+      if (!tooltip) return;
+      
+      // Find the migrations container
+      const migrationsContainer = document.querySelector('.mappings-container');
+      if (!migrationsContainer) return;
+      
+      const containerRect = migrationsContainer.getBoundingClientRect();
+      
+      // Position tooltip centered above the migrations box
+      tooltip.style.left = (containerRect.left + containerRect.width / 2 - 100) + 'px'; // 100px is half the tooltip width
+      tooltip.style.top = (containerRect.top - 60) + 'px'; // 60px above the container
+      tooltip.style.right = 'auto';
+      tooltip.style.bottom = 'auto';
+      tooltip.style.marginLeft = '0';
+    }
+
+    // Add tooltip positioning on hover
+    document.addEventListener('mouseover', (e) => {
+      if (e.target.closest('.tooltip')) {
+        const tooltip = e.target.closest('.tooltip');
+        setTimeout(() => positionTooltip(tooltip), 10);
+      }
+    });
+
+    // Handle messages from the plugin
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      console.log('Message type:', msg.type);
+
+      switch (msg.type) {
+        case 'selectionChange':
+          currentSelection = msg.selection || [];
+          console.log('Selection changed:', currentSelection.length, 'components');
+          
+          const copyKeyBtn = document.getElementById('copyKeyBtn');
+          if (copyKeyBtn) {
+            copyKeyBtn.style.display = currentSelection.length > 0 ? 'inline-block' : 'none';
+          }
+          
+          if (!isMainUIVisible) {
+            return;
+          }
+          
+          // Handle selection in main UI
+          if (msg.selection.length === 0) {
+            if (collectingState.active && currentMode === 'bulk' && collectingState.newKey && collectingState.oldKeys.length > 0) {
+              finishBulkSelection();
+            }
+            updateStatus();
+            return;
+          }
+
+          const component = msg.selection[0];
+          if (!component.key) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = 'status-message error';
+            statusEl.innerHTML = 'Selected node is not a component!';
+            return;
+          }
+
+          if (!collectingState.active || !collectingState.oldKeys.length) {
+            // First selection - collect OLD components
+            collectingState.active = true;
+            collectingState.oldKeys = msg.selection.map(comp => comp.key);
+            collectingState.oldNames = msg.selection.map(comp => comp.name);
+            document.getElementById('collectingBadge').style.display = 'inline-block';
+          } else {
+            // Second selection - check if it's a single NEW component
+            if (msg.selection.length > 1) {
+              const statusEl = document.getElementById('statusMessage');
+              statusEl.className = 'status-message error';
+              statusEl.innerHTML = 'You can only select 1 component to map the OLD keys to';
+              return;
+            }
+            
+            // Complete the mapping
+            const newComponent = msg.selection[0];
+            console.log('Completing mapping with:', newComponent);
+            
+            collectingState.oldKeys.forEach((oldKey, index) => {
+              addMapping(oldKey, newComponent.key, collectingState.oldNames[index], newComponent.name);
+            });
+            
+            // Store the names before resetting state
+            const oldNames = [...collectingState.oldNames];
+            const newName = newComponent.name;
+            
+            console.log('About to call showMappingSuccess with:', oldNames, newName);
+            resetCollectingState();
+            showMappingSuccess(oldNames, newName);
+            return; // Don't call updateStatus() after showing success message
+          }
+          updateStatus();
+          break;
+
+        case 'loadedMappings':
+          console.log('Loaded mappings data:', msg.data);
+          
+          if (Array.isArray(msg.data)) {
+            mappings = msg.data;
+            if (mappings.length > 0) {
+              document.getElementById('previousMigrations').style.display = 'block';
+              document.getElementById('migrationCount').innerHTML = `<strong>${mappings.length} migrations</strong>`;
+              const componentNames = mappings.map(m => m.oldName || 'Component').join(', ');
+              document.getElementById('migrationTooltip').textContent = componentNames;
+            }
+          } else if (msg.data && msg.data.mappings) {
+            if (!isDataExpired(msg.data.timestamp)) {
+              mappings = msg.data.mappings || [];
+              if (mappings.length > 0) {
+                document.getElementById('previousMigrations').style.display = 'block';
+                document.getElementById('migrationCount').innerHTML = `<strong>${mappings.length} migrations</strong>`;
+                const componentNames = mappings.map(m => m.oldName || 'Component').join(', ');
+                document.getElementById('migrationTooltip').textContent = componentNames;
+              }
+            } else {
+              mappings = [];
+            }
+          } else {
+            mappings = [];
+          }
+          
+          showWelcomeState();
+          break;
+
+        case 'keyCopied':
+          if (msg.success && msg.key) {
+            showCopyModal(msg.key, 'Component Key - Copy to clipboard:');
+          } else {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = 'status-message error';
+            statusEl.innerHTML = msg.error || 'Failed to get component key';
+            setTimeout(updateStatus, 2000);
+          }
+          break;
+
+        case 'message':
+          const msgEl = document.getElementById('statusMessage');
+          msgEl.className = `status-message ${msg.variant || 'info'}`;
+          msgEl.innerHTML = msg.text;
+          if (msg.timeout) {
+            setTimeout(updateStatus, msg.timeout);
+          }
+          break;
+      }
+    };
+  </script>
+</body>
+</html>
