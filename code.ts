@@ -5,7 +5,7 @@
 // Show the UI
 figma.showUI(__html__, { 
   width: 380, 
-  height: 600,
+  height: 520,
   title: "Component Migration Helper"
 });
 
@@ -196,13 +196,13 @@ async function generateVisualComparison(mappings: Mapping[]) {
     // Create a new frame for the comparison
     const frame = figma.createFrame();
     frame.name = "Component Migration Visual";
-    frame.layoutMode = "HORIZONTAL";
+    frame.layoutMode = "VERTICAL";
     frame.layoutAlign = "STRETCH";
-    frame.itemSpacing = 32;
-    frame.paddingLeft = 32;
-    frame.paddingRight = 32;
-    frame.paddingTop = 32;
-    frame.paddingBottom = 32;
+    frame.itemSpacing = 24;
+    frame.paddingLeft = 40;
+    frame.paddingRight = 40;
+    frame.paddingTop = 40;
+    frame.paddingBottom = 40;
     frame.fills = [{ type: 'SOLID', color: { r: 0.98, g: 0.98, b: 0.98 } }];
     frame.primaryAxisSizingMode = "AUTO";
     frame.counterAxisSizingMode = "AUTO";
@@ -215,16 +215,16 @@ async function generateVisualComparison(mappings: Mapping[]) {
     
     for (const mapping of mappings) {
       try {
-        // Create container for this mapping
+        // Create container for this mapping pair (horizontal layout)
         const pairFrame = figma.createFrame();
         pairFrame.name = `${mapping.oldName || 'Old'} → ${mapping.newName || 'New'}`;
-        pairFrame.layoutMode = "VERTICAL";
+        pairFrame.layoutMode = "HORIZONTAL";
         pairFrame.layoutAlign = "STRETCH";
-        pairFrame.itemSpacing = 16;
-        pairFrame.paddingLeft = 16;
-        pairFrame.paddingRight = 16;
-        pairFrame.paddingTop = 16;
-        pairFrame.paddingBottom = 16;
+        pairFrame.itemSpacing = 32;
+        pairFrame.paddingLeft = 24;
+        pairFrame.paddingRight = 24;
+        pairFrame.paddingTop = 24;
+        pairFrame.paddingBottom = 24;
         pairFrame.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
         pairFrame.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
         pairFrame.strokeWeight = 1;
@@ -237,70 +237,103 @@ async function generateVisualComparison(mappings: Mapping[]) {
         oldSection.name = "OLD";
         oldSection.layoutMode = "VERTICAL";
         oldSection.layoutAlign = "STRETCH";
-        oldSection.itemSpacing = 8;
+        oldSection.itemSpacing = 12;
+        oldSection.primaryAxisSizingMode = "AUTO";
+        oldSection.counterAxisSizingMode = "AUTO";
         
-        // OLD label
+        // OLD label (RED)
         const oldLabel = figma.createText();
         oldLabel.characters = "OLD";
         oldLabel.fontSize = 12;
         oldLabel.fontName = { family: "Inter", style: "Bold" };
-        oldLabel.fills = [{ type: 'SOLID', color: { r: 0.6, g: 0.6, b: 0.6 } }];
+        oldLabel.fills = [{ type: 'SOLID', color: { r: 0.8, g: 0.2, b: 0.2 } }]; // Red color
         oldSection.appendChild(oldLabel);
         
-        // OLD component name
+        // OLD component title and key
+        const oldTitleFrame = figma.createFrame();
+        oldTitleFrame.layoutMode = "VERTICAL";
+        oldTitleFrame.layoutAlign = "STRETCH";
+        oldTitleFrame.itemSpacing = 4;
+        oldTitleFrame.primaryAxisSizingMode = "AUTO";
+        oldTitleFrame.counterAxisSizingMode = "AUTO";
+        
+        // Component name
         const oldName = figma.createText();
-        oldName.characters = mapping.oldName || mapping.oldKey;
-        oldName.fontSize = 14;
+        const oldParts = (mapping.oldName || 'Component').split('|');
+        const oldCleanName = oldParts[0];
+        oldName.characters = oldCleanName;
+        oldName.fontSize = 16;
         oldName.fontName = { family: "Inter", style: "Medium" };
-        oldName.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.2, b: 0.2 } }];
-        oldSection.appendChild(oldName);
+        oldName.fills = [{ type: 'SOLID', color: { r: 0.1, g: 0.1, b: 0.1 } }];
+        oldTitleFrame.appendChild(oldName);
+        
+        // Component key
+        const oldKeyText = figma.createText();
+        oldKeyText.characters = `(${mapping.oldKey})`;
+        oldKeyText.fontSize = 12;
+        oldKeyText.fontName = { family: "Inter", style: "Regular" };
+        oldKeyText.fills = [{ type: 'SOLID', color: { r: 0.6, g: 0.6, b: 0.6 } }];
+        oldTitleFrame.appendChild(oldKeyText);
+        
+        // Variant properties (if any)
+        if (oldParts[1]) {
+          const oldVariantText = figma.createText();
+          oldVariantText.characters = oldParts[1];
+          oldVariantText.fontSize = 11;
+          oldVariantText.fontName = { family: "Inter", style: "Regular" };
+          oldVariantText.fills = [{ type: 'SOLID', color: { r: 0.5, g: 0.5, b: 0.5 } }];
+          oldTitleFrame.appendChild(oldVariantText);
+        }
+        
+        oldSection.appendChild(oldTitleFrame);
         
         // Try to create instance of OLD component
         try {
           const formattedKey = formatComponentKey(mapping.oldKey);
-          console.log('Trying to import OLD component with key:', formattedKey);
           const oldComponent = await figma.importComponentByKeyAsync(formattedKey);
           if (oldComponent) {
             const oldInstance = oldComponent.createInstance();
             oldSection.appendChild(oldInstance);
           }
         } catch (err) {
-          console.error('Failed to import OLD component:', mapping.oldKey, err);
           const errorText = figma.createText();
           errorText.characters = "⚠️ Component not found";
           errorText.fontSize = 12;
           errorText.fontName = { family: "Inter", style: "Regular" };
           errorText.fills = [{ type: 'SOLID', color: { r: 0.8, g: 0.2, b: 0.2 } }];
           oldSection.appendChild(errorText);
-          
-          // Add debug info
-          const debugText = figma.createText();
-          debugText.characters = `Key: ${mapping.oldKey.substring(0, 20)}...`;
-          debugText.fontSize = 10;
-          debugText.fontName = { family: "Inter", style: "Regular" };
-          debugText.fills = [{ type: 'SOLID', color: { r: 0.5, g: 0.5, b: 0.5 } }];
-          oldSection.appendChild(debugText);
         }
         
         pairFrame.appendChild(oldSection);
         
-        // Arrow
+        // Arrow container
+        const arrowContainer = figma.createFrame();
+        arrowContainer.layoutMode = "VERTICAL";
+        arrowContainer.layoutAlign = "CENTER";
+        arrowContainer.primaryAxisAlignItems = "CENTER";
+        arrowContainer.counterAxisAlignItems = "CENTER";
+        arrowContainer.primaryAxisSizingMode = "AUTO";
+        arrowContainer.counterAxisSizingMode = "AUTO";
+        
         const arrowText = figma.createText();
-        arrowText.characters = "↓";
+        arrowText.characters = "→";
         arrowText.fontSize = 24;
         arrowText.fontName = { family: "Inter", style: "Regular" };
         arrowText.fills = [{ type: 'SOLID', color: { r: 0.4, g: 0.4, b: 0.4 } }];
-        arrowText.textAlignHorizontal = "CENTER";
-        pairFrame.appendChild(arrowText);
+        arrowContainer.appendChild(arrowText);
+        
+        pairFrame.appendChild(arrowContainer);
         
         // NEW component section
         const newSection = figma.createFrame();
         newSection.name = "NEW";
         newSection.layoutMode = "VERTICAL";
         newSection.layoutAlign = "STRETCH";
-        newSection.itemSpacing = 8;
+        newSection.itemSpacing = 12;
+        newSection.primaryAxisSizingMode = "AUTO";
+        newSection.counterAxisSizingMode = "AUTO";
         
-        // NEW label
+        // NEW label (GREEN)
         const newLabel = figma.createText();
         newLabel.characters = "NEW";
         newLabel.fontSize = 12;
@@ -308,39 +341,59 @@ async function generateVisualComparison(mappings: Mapping[]) {
         newLabel.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.6, b: 0.2 } }];
         newSection.appendChild(newLabel);
         
-        // NEW component name
+        // NEW component title and key
+        const newTitleFrame = figma.createFrame();
+        newTitleFrame.layoutMode = "VERTICAL";
+        newTitleFrame.layoutAlign = "STRETCH";
+        newTitleFrame.itemSpacing = 4;
+        newTitleFrame.primaryAxisSizingMode = "AUTO";
+        newTitleFrame.counterAxisSizingMode = "AUTO";
+        
+        // Component name
         const newName = figma.createText();
-        newName.characters = mapping.newName || mapping.newKey;
-        newName.fontSize = 14;
+        const newParts = (mapping.newName || 'Component').split('|');
+        const newCleanName = newParts[0];
+        newName.characters = newCleanName;
+        newName.fontSize = 16;
         newName.fontName = { family: "Inter", style: "Medium" };
-        newName.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.2, b: 0.2 } }];
-        newSection.appendChild(newName);
+        newName.fills = [{ type: 'SOLID', color: { r: 0.1, g: 0.1, b: 0.1 } }];
+        newTitleFrame.appendChild(newName);
+        
+        // Component key
+        const newKeyText = figma.createText();
+        newKeyText.characters = `(${mapping.newKey})`;
+        newKeyText.fontSize = 12;
+        newKeyText.fontName = { family: "Inter", style: "Regular" };
+        newKeyText.fills = [{ type: 'SOLID', color: { r: 0.6, g: 0.6, b: 0.6 } }];
+        newTitleFrame.appendChild(newKeyText);
+        
+        // Variant properties (if any)
+        if (newParts[1]) {
+          const newVariantText = figma.createText();
+          newVariantText.characters = newParts[1];
+          newVariantText.fontSize = 11;
+          newVariantText.fontName = { family: "Inter", style: "Regular" };
+          newVariantText.fills = [{ type: 'SOLID', color: { r: 0.5, g: 0.5, b: 0.5 } }];
+          newTitleFrame.appendChild(newVariantText);
+        }
+        
+        newSection.appendChild(newTitleFrame);
         
         // Try to create instance of NEW component
         try {
           const formattedKey = formatComponentKey(mapping.newKey);
-          console.log('Trying to import NEW component with key:', formattedKey);
           const newComponent = await figma.importComponentByKeyAsync(formattedKey);
           if (newComponent) {
             const newInstance = newComponent.createInstance();
             newSection.appendChild(newInstance);
           }
         } catch (err) {
-          console.error('Failed to import NEW component:', mapping.newKey, err);
           const errorText = figma.createText();
           errorText.characters = "⚠️ Component not found";
           errorText.fontSize = 12;
           errorText.fontName = { family: "Inter", style: "Regular" };
           errorText.fills = [{ type: 'SOLID', color: { r: 0.8, g: 0.2, b: 0.2 } }];
           newSection.appendChild(errorText);
-          
-          // Add debug info
-          const debugText = figma.createText();
-          debugText.characters = `Key: ${mapping.newKey.substring(0, 20)}...`;
-          debugText.fontSize = 10;
-          debugText.fontName = { family: "Inter", style: "Regular" };
-          debugText.fills = [{ type: 'SOLID', color: { r: 0.5, g: 0.5, b: 0.5 } }];
-          newSection.appendChild(debugText);
         }
         
         pairFrame.appendChild(newSection);

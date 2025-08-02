@@ -13,13 +13,13 @@
       font-size: 12px;
       color: #333;
       background: #fff;
-      padding: 16px;
+      padding: 12px;
     }
 
     h1 {
       font-size: 14px;
       font-weight: 600;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       color: #000;
     }
 
@@ -129,6 +129,23 @@
       flex-shrink: 0;
     }
 
+    .mapping-old-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .delete-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: absolute;
+      right: -15px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
     .mapping-info {
       flex: 1;
       min-width: 0;
@@ -177,7 +194,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .btn {
@@ -254,7 +271,7 @@
     .divider {
       height: 1px;
       background: #e0e0e0;
-      margin: 16px 0;
+      margin: 12px 0;
     }
 
     .notes-input {
@@ -485,6 +502,7 @@
     <div class="actions-container">
       <button class="btn" id="copyKeyBtn" onclick="copySelectedKey()" style="display: none;">📋 Copy Selected Key</button>
       <button class="btn" onclick="toggleManualInput()">📝 Paste Keys Manually</button>
+      <button class="btn" onclick="importCSV()">📥 Import CSV</button>
       <button class="btn" id="generateVisualsBtn" onclick="generateVisuals()" style="display: none;">🎨 Generate Visuals</button>
     </div>
 
@@ -516,6 +534,9 @@ efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border
       <button class="btn danger" onclick="clearAll()" id="clearBtn">Clear All</button>
     </div>
   </div>
+
+  <!-- Hidden file input for CSV import -->
+  <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVFileSelect(event)">
 
   <!-- Copy Modal -->
   <div id="copyModal" class="copy-modal">
@@ -636,52 +657,86 @@ efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border
 
     function renderMappings() {
       const container = document.getElementById('mappingsList');
-      const generateBtn = document.getElementById('generateVisualsBtn');
       const clearBtn = document.getElementById('clearBtn');
       const exportBtn = document.getElementById('exportBtn');
       const copyOldBtn = document.querySelector('.mappings-actions button[onclick="copyOldKeys()"]');
       const copyNewBtn = document.querySelector('.mappings-actions button[onclick="copyNewKeys()"]');
+      const generateBtn = document.getElementById('generateVisualsBtn');
       
       if (mappings.length === 0) {
         container.innerHTML = '<div class="empty-state">No mappings yet. Start by selecting components!</div>';
         // Only hide the copy buttons when there are no mappings
         if (copyOldBtn) copyOldBtn.style.display = 'none';
         if (copyNewBtn) copyNewBtn.style.display = 'none';
+        if (generateBtn) generateBtn.style.display = 'none';
         return;
       }
 
-      // Show copy buttons when there are mappings
+      // Show copy buttons and generate button when there are mappings
       if (copyOldBtn) copyOldBtn.style.display = 'inline-block';
       if (copyNewBtn) copyNewBtn.style.display = 'inline-block';
+      if (generateBtn) generateBtn.style.display = 'inline-block';
+
       
-      container.innerHTML = mappings.map((mapping, index) => {
-        const isDuplicate = mapping.oldKey === mapping.newKey;
+      // Group mappings by NEW component for display
+      const groupedMappings = {};
+      mappings.forEach((mapping, index) => {
+        if (!groupedMappings[mapping.newKey]) {
+          groupedMappings[mapping.newKey] = {
+            oldMappings: [],
+            newKey: mapping.newKey,
+            newName: mapping.newName,
+            indices: []
+          };
+        }
+        groupedMappings[mapping.newKey].oldMappings.push(mapping);
+        groupedMappings[mapping.newKey].indices.push(index);
+      });
+      
+      container.innerHTML = Object.values(groupedMappings).map(group => {
+        const isDuplicate = group.oldMappings.some(m => m.oldKey === group.newKey);
         
-        // Extract clean name and variant props
-        const oldParts = (mapping.oldName || 'Component').split('|');
-        const oldCleanName = oldParts[0];
-        const oldVariants = oldParts[1] || '';
-        
-        const newParts = (mapping.newName || 'Component').split('|');
+        // Extract clean name for NEW component
+        const newParts = (group.newName || 'Component').split('|');
         const newCleanName = newParts[0];
         const newVariants = newParts[1] || '';
         
-        return `
-          <div class="mapping-item ${isDuplicate ? 'duplicate' : ''}">
+        // Create OLD components display
+        const oldComponentsHtml = group.oldMappings.map((mapping, idx) => {
+          const oldParts = (mapping.oldName || 'Component').split('|');
+          const oldCleanName = oldParts[0];
+          const oldVariants = oldParts[1] || '';
+          
+          return `
             <div class="mapping-info">
               <span class="mapping-key tooltip">${mapping.oldKey}
                 ${oldVariants ? `<span class="tooltiptext">${oldVariants}</span>` : ''}
               </span>
               <span class="mapping-name">(${oldCleanName})</span>
             </div>
+          `;
+        }).join('');
+        
+        // Create delete buttons for each mapping
+        const deleteButtons = group.indices.map(index => 
+          `<button class="delete-btn" onclick="removeMapping(${index})" title="Remove mapping">×</button>`
+        ).join('');
+        
+        return `
+          <div class="mapping-item ${isDuplicate ? 'duplicate' : ''}">
+            <div class="mapping-old-group">
+              ${oldComponentsHtml}
+            </div>
             <span class="mapping-arrow">→</span>
             <div class="mapping-info">
-              <span class="mapping-key tooltip">${mapping.newKey}
+              <span class="mapping-key tooltip">${group.newKey}
                 ${newVariants ? `<span class="tooltiptext">${newVariants}</span>` : ''}
               </span>
               <span class="mapping-name">(${newCleanName})</span>
             </div>
-            <button class="delete-btn" onclick="removeMapping(${index})" title="Remove mapping">×</button>
+            <div class="delete-buttons">
+              ${deleteButtons}
+            </div>
           </div>
         `;
       }).join('');
@@ -857,14 +912,214 @@ efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border
       setTimeout(updateStatus, 2000);
     }
 
-    function exportCSV() {
-      if (mappings.length === 0) return;
-      const csv = mappings.map(m => 
-        `${m.oldKey},${m.newKey},${m.notes || ''}`
-      ).join('\n');
-      const filename = `component-migration-${new Date().toISOString().split('T')[0]}.csv`;
-      showCopyModal(csv, `CSV Export - Save as: ${filename}`);
+
+    function importCSV() {
+      // Trigger file selection
+      document.getElementById('csvFileInput').click();
     }
+
+    function handleCSVFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const csvContent = e.target.result;
+        parseAndImportCSV(csvContent);
+      };
+      reader.readAsText(file);
+      
+      // Reset the file input
+      event.target.value = '';
+    }
+
+    function parseAndImportCSV(csvContent) {
+      try {
+        const lines = csvContent.split('\n').filter(line => line.trim());
+        if (lines.length === 0) {
+          showImportError('CSV file is empty');
+          return;
+        }
+        
+        let startIndex = 0;
+        // Check if first line is a header (contains "old" and "new")
+        const firstLine = lines[0].toLowerCase();
+        if (firstLine.includes('old') && firstLine.includes('new')) {
+          startIndex = 1; // Skip header row
+        }
+        
+        let importedCount = 0;
+        let skippedCount = 0;
+        
+        for (let i = startIndex; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          
+          // Parse CSV line (handle quoted values and commas)
+          const columns = parseCSVLine(line);
+          if (columns.length < 2) {
+            skippedCount++;
+            continue;
+          }
+          
+          const oldKeysStr = columns[0].trim();
+          const newKey = columns[1].trim();
+          
+          if (!oldKeysStr || !newKey) {
+            skippedCount++;
+            continue;
+          }
+          
+          // Split old keys by comma (handle many-to-one mappings)
+          const oldKeys = oldKeysStr.split(',').map(key => key.trim()).filter(key => key);
+          
+          if (oldKeys.length === 0) {
+            skippedCount++;
+            continue;
+          }
+          
+          // Add each old key mapping to the new key
+          oldKeys.forEach(oldKey => {
+            // Check if this mapping already exists
+            const existing = mappings.find(m => m.oldKey === oldKey);
+            if (existing) {
+              // Update existing mapping
+              existing.newKey = newKey;
+              existing.newName = `Imported Component (${newKey.substring(0, 8)}...)`;
+            } else {
+              // Add new mapping
+              mappings.push({
+                oldKey: oldKey,
+                newKey: newKey,
+                oldName: `Imported Component (${oldKey.substring(0, 8)}...)`,
+                newName: `Imported Component (${newKey.substring(0, 8)}...)`,
+                notes: ''
+              });
+            }
+            importedCount++;
+          });
+        }
+        
+        // Update UI and save
+        renderMappings();
+        saveMappings();
+        
+        // Show success message
+        const statusEl = document.getElementById('statusMessage');
+        statusEl.className = 'status-message success';
+        let message = `Successfully imported ${importedCount} mapping${importedCount !== 1 ? 's' : ''}`;
+        if (skippedCount > 0) {
+          message += ` (${skippedCount} row${skippedCount !== 1 ? 's' : ''} skipped)`;
+        }
+        statusEl.innerHTML = message;
+        
+        setTimeout(() => {
+          updateStatus();
+        }, 3000);
+        
+      } catch (error) {
+        console.error('Error parsing CSV:', error);
+        showImportError('Failed to parse CSV file. Please check the format.');
+      }
+    }
+
+    function parseCSVLine(line) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            // Escaped quote
+            current += '"';
+            i++; // Skip next quote
+          } else {
+            // Toggle quote state
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          // End of field
+          result.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      
+      // Add the last field
+      result.push(current);
+      
+      return result;
+    }
+
+    function showImportError(message) {
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.className = 'status-message error';
+      statusEl.innerHTML = message;
+      setTimeout(() => {
+        updateStatus();
+      }, 3000);
+    }
+
+    function exportCSV() {
+  if (mappings.length === 0) return;
+  
+  // Create CSV with headers
+  const headers = 'Old components,New,Notes';
+  
+  // Group mappings by NEW component
+  const groupedMappings = {};
+  mappings.forEach(m => {
+    if (!groupedMappings[m.newKey]) {
+      groupedMappings[m.newKey] = {
+        oldKeys: [],
+        newKey: m.newKey,
+        notes: m.notes || ''
+      };
+    }
+    groupedMappings[m.newKey].oldKeys.push(m.oldKey);
+  });
+  
+  const rows = Object.values(groupedMappings).map(group => {
+    // Join multiple old keys with commas
+    const oldKeysJoined = group.oldKeys.join(',');
+    const newKey = group.newKey;
+    const notes = group.notes;
+    
+    // Escape values that contain commas or quotes
+    const escapedOldKeys = oldKeysJoined.includes(',') || oldKeysJoined.includes('"') ? `"${oldKeysJoined.replace(/"/g, '""')}"` : oldKeysJoined;
+    const escapedNewKey = newKey.includes(',') || newKey.includes('"') ? `"${newKey.replace(/"/g, '""')}"` : newKey;
+    const escapedNotes = notes.includes(',') || notes.includes('"') ? `"${notes.replace(/"/g, '""')}"` : notes;
+    
+    return `${escapedOldKeys},${escapedNewKey},${escapedNotes}`;
+  });
+  
+  // Combine headers and rows
+  const csv = [headers, ...rows].join('\n');
+  
+  const filename = `component-migration-${new Date().toISOString().split('T')[0]}.csv`;
+  
+  // Create a downloadable CSV file
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  
+  // Create download link
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } else {
+    // Fallback to copy modal if download is not supported
+    showCopyModal(csv, `CSV Export - ${filename}`);
+  }
+}
 
     function clearAll() {
       if (mappings.length === 0) return;
@@ -926,7 +1181,7 @@ efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border
         const cleanName = alreadyUsedAsNew.name.split('|')[0];
         const statusEl = document.getElementById('statusMessage');
         statusEl.className = 'status-message error';
-        statusEl.innerHTML = `Oops, <strong>${cleanName}</strong> is already mapped. Please select a different component.`;
+        statusEl.innerHTML = `Oops, <strong>${cleanName}</strong> is already used as a replacement component. It cannot be used as an old component.`;
         return;
       }
       
