@@ -455,6 +455,37 @@
       gap: 8px;
       justify-content: flex-end;
     }
+    .mapping-old-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  cursor: pointer;
+  transition: background 0.2s;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 4px;
+}
+
+.mapping-old-group:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.mapping-new-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  cursor: pointer;
+  transition: background 0.2s;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 4px;
+}
+
+.mapping-new-group:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
   </style>
 </head>
 <body>
@@ -492,10 +523,6 @@
       </div>
       <div id="mappingsList">
         <div class="empty-state">No mappings yet. Start by selecting components!</div>
-      </div>
-      <div class="mappings-actions">
-        <button class="btn small" onclick="copyOldKeys()">📋 Copy Old Keys</button>
-        <button class="btn small" onclick="copyNewKeys()">📋 Copy New Keys</button>
       </div>
     </div>
 
@@ -573,6 +600,29 @@ efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border
       }, 100);
     };
 
+         // Since Figma blocks keyboard events in plugin UI, let's use a different approach
+     // We'll make the button more prominent and add a visual indicator
+     function makeContinueButtonFocused() {
+       // Find the continue mapping button and make it more prominent
+       const statusEl = document.getElementById('statusMessage');
+       if (statusEl && statusEl.innerHTML.includes('Continue mapping')) {
+         // Add a pulsing animation to draw attention
+         statusEl.style.animation = 'pulse 2s infinite';
+       }
+     }
+     
+     // Add CSS for pulsing animation
+     const style = document.createElement('style');
+     style.textContent = `
+       @keyframes pulse {
+         0% { opacity: 1; }
+         50% { opacity: 0.7; }
+         100% { opacity: 1; }
+       }
+     `;
+     document.head.appendChild(style);
+
+
     function isDataExpired(timestamp) {
       if (!timestamp) return true;
       const twoWeeks = 14 * 24 * 60 * 60 * 1000;
@@ -634,130 +684,130 @@ efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border
           statusEl.innerHTML = 'Now select the replacement component <button class="cancel-btn" onclick="cancelSelection()">Cancel</button>';
         }
       } else {
-        // Check if components are selected when not in collecting state
-        if (currentSelection.length > 0) {
-          const selectedComponent = currentSelection[0];
-          const isAlreadyMapped = mappings.some(m => m.oldKey === selectedComponent.key);
-          
-          if (isAlreadyMapped) {
-            // Extract clean component name (remove variant info)
-            const cleanName = selectedComponent.name.split('|')[0];
-            statusEl.className = 'status-message success';
-            statusEl.innerHTML = `<strong>${cleanName}</strong> has been added. Make a new selection to continue mapping`;
-          } else {
-            statusEl.className = 'status-message info';
-            statusEl.innerHTML = `First, select the OLD component, or <a href="#" onclick="useSelectedAsOld()" style="color: #0066ff; text-decoration: underline;">use current selection</a>`;
-          }
-        } else {
-          statusEl.className = 'status-message info';
-          statusEl.innerHTML = 'First, select the OLD component';
-        }
-      }
+  // Check if components are selected when not in collecting state
+  if (currentSelection.length > 0) {
+    const selectedComponent = currentSelection[0];
+    const isAlreadyMapped = mappings.some(m => m.oldKey === selectedComponent.key);
+    
+    if (isAlreadyMapped) {
+      // Extract clean component name (remove variant info)
+      const cleanName = selectedComponent.name.split('|')[0];
+      statusEl.className = 'status-message success';
+      statusEl.innerHTML = `<strong>${cleanName}</strong> has been added. Make a new selection to continue mapping`;
+    } else {
+      // Show how many components are selected and offer to continue mapping
+const componentText = currentSelection.length === 1 ? 'component' : 'components';
+statusEl.className = 'status-message info';
+       statusEl.innerHTML = `You have ${currentSelection.length} ${componentText} selected. <button class="btn primary" style="margin-left: 8px; padding: 6px 16px; font-size: 12px; font-weight: 600;" onclick="useSelectedAsOld()">Continue mapping</button>`;
+       makeContinueButtonFocused();
+    }
+  } else {
+    statusEl.className = 'status-message info';
+    statusEl.innerHTML = 'First, select the OLD component';
+  }
+}
     }
 
     function renderMappings() {
-      const container = document.getElementById('mappingsList');
-      const clearBtn = document.getElementById('clearBtn');
-      const exportBtn = document.getElementById('exportBtn');
-      const copyOldBtn = document.querySelector('.mappings-actions button[onclick="copyOldKeys()"]');
-      const copyNewBtn = document.querySelector('.mappings-actions button[onclick="copyNewKeys()"]');
-      const generateBtn = document.getElementById('generateVisualsBtn');
-      
-      if (mappings.length === 0) {
-        container.innerHTML = '<div class="empty-state">No mappings yet. Start by selecting components!</div>';
-        // Only hide the copy buttons when there are no mappings
-        if (copyOldBtn) copyOldBtn.style.display = 'none';
-        if (copyNewBtn) copyNewBtn.style.display = 'none';
-        if (generateBtn) generateBtn.style.display = 'none';
-        return;
-      }
+  const container = document.getElementById('mappingsList');
+  const clearBtn = document.getElementById('clearBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const generateBtn = document.getElementById('generateVisualsBtn');
+  
+  if (mappings.length === 0) {
+    container.innerHTML = '<div class="empty-state">No mappings yet. Start by selecting components!</div>';
+    if (generateBtn) generateBtn.style.display = 'none';
+    return;
+  }
 
-      // Show copy buttons and generate button when there are mappings
-      if (copyOldBtn) copyOldBtn.style.display = 'inline-block';
-      if (copyNewBtn) copyNewBtn.style.display = 'inline-block';
-      if (generateBtn) generateBtn.style.display = 'inline-block';
-
-      
-      // Group mappings by NEW component for display
-      const groupedMappings = {};
-      mappings.forEach((mapping, index) => {
-        if (!groupedMappings[mapping.newKey]) {
-          groupedMappings[mapping.newKey] = {
-            oldMappings: [],
-            newKey: mapping.newKey,
-            newName: mapping.newName,
-            indices: []
-          };
-        }
-        groupedMappings[mapping.newKey].oldMappings.push(mapping);
-        groupedMappings[mapping.newKey].indices.push(index);
-      });
-      
-      container.innerHTML = Object.values(groupedMappings).map(group => {
-        const isDuplicate = group.oldMappings.some(m => m.oldKey === group.newKey);
-        
-        // Extract clean name for NEW component
-        const newParts = (group.newName || 'Component').split('|');
-        const newCleanName = newParts[0];
-        const newVariants = newParts[1] || '';
-        
-        // Create OLD components display
-        const oldComponentsHtml = group.oldMappings.map((mapping, idx) => {
-          const oldParts = (mapping.oldName || 'Component').split('|');
-          const oldCleanName = oldParts[0];
-          const oldVariants = oldParts[1] || '';
-          
-          return `
-            <div class="mapping-info">
-              <span class="mapping-key tooltip">${mapping.oldKey}
-                ${oldVariants ? `<span class="tooltiptext">${oldVariants}</span>` : ''}
-              </span>
-              <span class="mapping-name">(${oldCleanName})</span>
-            </div>
-          `;
-        }).join('');
-        
-        // Create delete buttons for each mapping
-        const deleteButtons = group.indices.map(index => 
-          `<button class="delete-btn" onclick="removeMapping(${index})" title="Remove mapping">×</button>`
-        ).join('');
-        
-        return `
-          <div class="mapping-item ${isDuplicate ? 'duplicate' : ''}">
-            <div class="mapping-old-group">
-              ${oldComponentsHtml}
-            </div>
-            <span class="mapping-arrow">→</span>
-            <div class="mapping-info">
-              <span class="mapping-key tooltip">${group.newKey}
-                ${newVariants ? `<span class="tooltiptext">${newVariants}</span>` : ''}
-              </span>
-              <span class="mapping-name">(${newCleanName})</span>
-            </div>
-            <div class="delete-buttons">
-              ${deleteButtons}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      // Position tooltips after rendering
-      setTimeout(() => {
-        const tooltips = container.querySelectorAll('.tooltip');
-        tooltips.forEach(tooltip => {
-          if (tooltip.querySelector('.tooltiptext')) {
-            positionTooltip(tooltip);
-          }
-        });
-      }, 50);
-
-      const hasDuplicates = mappings.some(m => m.oldKey === m.newKey);
-      if (hasDuplicates) {
-        const statusEl = document.getElementById('statusMessage');
-        statusEl.className = 'status-message warning';
-        statusEl.innerHTML = '⚠️ Warning: Some mappings have identical OLD and NEW keys!';
-      }
+  // Show generate button when there are mappings
+  if (generateBtn) generateBtn.style.display = 'inline-block';
+  
+  // Group mappings by NEW component for display
+  const groupedMappings = {};
+  mappings.forEach((mapping, index) => {
+    if (!groupedMappings[mapping.newKey]) {
+      groupedMappings[mapping.newKey] = {
+        oldMappings: [],
+        newKey: mapping.newKey,
+        newName: mapping.newName,
+        indices: []
+      };
     }
+    groupedMappings[mapping.newKey].oldMappings.push(mapping);
+    groupedMappings[mapping.newKey].indices.push(index);
+  });
+  
+  container.innerHTML = Object.values(groupedMappings).map(group => {
+    const isDuplicate = group.oldMappings.some(m => m.oldKey === group.newKey);
+    
+    // Extract clean name for NEW component
+    const newParts = (group.newName || 'Component').split('|');
+    const newCleanName = newParts[0];
+    const newVariants = newParts[1] || '';
+    
+    // Create OLD components display
+    const oldComponentsHtml = group.oldMappings.map((mapping, idx) => {
+      const oldParts = (mapping.oldName || 'Component').split('|');
+      const oldCleanName = oldParts[0];
+      const oldVariants = oldParts[1] || '';
+      
+      return `
+        <div class="mapping-info">
+          <span class="mapping-key tooltip">${mapping.oldKey}
+            ${oldVariants ? `<span class="tooltiptext">${oldVariants}</span>` : ''}
+          </span>
+          <span class="mapping-name">(${oldCleanName})</span>
+        </div>
+      `;
+    }).join('');
+    
+    // Create delete buttons for each mapping
+    const deleteButtons = group.indices.map(index => 
+      `<button class="delete-btn" onclick="removeMapping(${index})" title="Remove mapping">×</button>`
+    ).join('');
+    
+    // Get all old keys for this group
+    const oldKeys = group.oldMappings.map(m => m.oldKey).join(',');
+
+    return `
+      <div class="mapping-item ${isDuplicate ? 'duplicate' : ''}">
+        <div class="mapping-old-group" onclick="copySpecificKeys('${oldKeys.replace(/'/g, "\\'")}', 'Old Keys')">
+          ${oldComponentsHtml}
+        </div>
+        <span class="mapping-arrow">→</span>
+        <div class="mapping-new-group" onclick="copySpecificKeys('${group.newKey}', 'New Key')">
+          <div class="mapping-info">
+            <span class="mapping-key tooltip">${group.newKey}
+              ${newVariants ? `<span class="tooltiptext">${newVariants}</span>` : ''}
+            </span>
+            <span class="mapping-name">(${newCleanName})</span>
+          </div>
+        </div>
+        <div class="delete-buttons">
+          ${deleteButtons}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Position tooltips after rendering
+  setTimeout(() => {
+    const tooltips = container.querySelectorAll('.tooltip');
+    tooltips.forEach(tooltip => {
+      if (tooltip.querySelector('.tooltiptext')) {
+        positionTooltip(tooltip);
+      }
+    });
+  }, 50);
+
+  const hasDuplicates = mappings.some(m => m.oldKey === m.newKey);
+  if (hasDuplicates) {
+    const statusEl = document.getElementById('statusMessage');
+    statusEl.className = 'status-message warning';
+    statusEl.innerHTML = '⚠️ Warning: Some mappings have identical OLD and NEW keys!';
+  }
+}
 
     function addMapping(oldKey, newKey, oldName = '', newName = '') {
       const existing = mappings.find(m => m.oldKey === oldKey);
@@ -872,8 +922,8 @@ efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border
       const input = document.getElementById('manualInput');
       input.classList.toggle('active');
       if (input.classList.contains('active')) {
-        document.getElementById('manualKeyInput').focus();
-      }
+  document.getElementById('oldKeysInput').focus();
+}
     }
 
     function processManualKeys() {
@@ -1259,12 +1309,10 @@ efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border
           }
 
           if (!collectingState.active || !collectingState.oldKeys.length) {
-            // First selection - collect OLD components
-            collectingState.active = true;
-            collectingState.oldKeys = msg.selection.map(comp => comp.key);
-            collectingState.oldNames = msg.selection.map(comp => comp.name);
-            document.getElementById('collectingBadge').style.display = 'inline-block';
-          } else {
+  // Just update the status, don't automatically start collecting
+  updateStatus();
+  return;
+} else {
             // Second selection - check if it's a single NEW component
             if (msg.selection.length > 1) {
               const statusEl = document.getElementById('statusMessage');
@@ -1342,8 +1390,14 @@ efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border
             setTimeout(updateStatus, msg.timeout);
           }
           break;
-      }
+          
+
+        }
     };
+
+    function copySpecificKeys(keys, type) {
+      showCopyModal(keys, `${type} - Copy to clipboard:`);
+    }
   </script>
 </body>
 </html>

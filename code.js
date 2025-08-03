@@ -37,6 +37,7 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
             break;
         case 'saveMappings':
             yield saveMappings(msg.data);
+            clearSelection();
             break;
         case 'loadMappings':
             yield loadSavedMappings();
@@ -94,6 +95,9 @@ function getComponentKey(node) {
         }
     }
     return null;
+}
+function clearSelection() {
+    figma.currentPage.selection = [];
 }
 // Get a readable component name
 function getComponentName(node) {

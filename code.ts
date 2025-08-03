@@ -37,6 +37,8 @@ setTimeout(() => {
   handleSelectionChange();
 }, 100);
 
+
+
 // Handle messages from the UI
 figma.ui.onmessage = async msg => {
   switch (msg.type) {
@@ -50,6 +52,7 @@ figma.ui.onmessage = async msg => {
       
     case 'saveMappings':
       await saveMappings(msg.data);
+      clearSelection();
       break;
       
     case 'loadMappings':
@@ -59,6 +62,8 @@ figma.ui.onmessage = async msg => {
     case 'getInitialSelection':
       handleSelectionChange();
       break;
+      
+
   }
 };
 
@@ -116,6 +121,9 @@ function getComponentKey(node: SceneNode): string | null {
   return null;
 }
 
+function clearSelection() {
+  figma.currentPage.selection = [];
+}
 // Get a readable component name
 function getComponentName(node: SceneNode): string {
   if (node.type === 'COMPONENT' || node.type === 'INSTANCE') {
