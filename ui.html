@@ -490,7 +490,6 @@
 </head>
 <body>
 
-  <!-- Welcome State -->
   <div id="welcomeState" class="welcome-state">
     <div class="welcome-message">
       <h2>Component key migration mapper</h2>
@@ -509,7 +508,6 @@
 
   </div>
 
-  <!-- Main UI (hidden initially) -->
   <div id="mainUI" style="display: none;">
 
     <div id="statusMessage" class="status-message info">
@@ -562,10 +560,8 @@ efda332867fd8eb7c642" style="width: 100%; min-height: 80px; padding: 8px; border
     </div>
   </div>
 
-  <!-- Hidden file input for CSV import -->
   <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVFileSelect(event)">
 
-  <!-- Copy Modal -->
   <div id="copyModal" class="copy-modal">
     <div class="copy-modal-content">
       <div class="copy-modal-header">Copy the text below:</div>
@@ -985,6 +981,7 @@ statusEl.className = 'status-message info';
 
     function parseAndImportCSV(csvContent) {
       try {
+        // Split by lines, filtering out empty lines
         const lines = csvContent.split('\n').filter(line => line.trim());
         if (lines.length === 0) {
           showImportError('CSV file is empty');
@@ -992,9 +989,9 @@ statusEl.className = 'status-message info';
         }
         
         let startIndex = 0;
-        // Check if first line is a header (contains "old" and "new")
+        // More robust header check for the user's specific CSV
         const firstLine = lines[0].toLowerCase();
-        if (firstLine.includes('old') && firstLine.includes('new')) {
+        if (firstLine.includes('component name') && firstLine.includes('key(s)') && firstLine.includes('replace with key')) {
           startIndex = 1; // Skip header row
         }
         
@@ -1003,50 +1000,50 @@ statusEl.className = 'status-message info';
         
         for (let i = startIndex; i < lines.length; i++) {
           const line = lines[i].trim();
-          if (!line) continue;
+          if (!line) {
+              skippedCount++;
+              continue;
+          }
           
-          // Parse CSV line (handle quoted values and commas)
           const columns = parseCSVLine(line);
-          if (columns.length < 2) {
+          
+          // Expect at least 3 columns: Component Name, Key(s), Replace with Key
+          if (columns.length < 3) {
             skippedCount++;
             continue;
           }
           
-          const oldKeysStr = columns[0].trim();
-          const newKey = columns[1].trim();
+          const componentName = columns[0].trim();
+          const oldKeysStr = columns[1].trim();
+          const newKey = columns[2].trim();
           
+          // Skip if either old keys or the new key is missing
           if (!oldKeysStr || !newKey) {
             skippedCount++;
             continue;
           }
           
-          // Split old keys by comma (handle many-to-one mappings)
-          const oldKeys = oldKeysStr.split(',').map(key => key.trim()).filter(key => key);
-          
+          // Parse the old keys string, which can contain commas and newlines
+          const oldKeys = oldKeysStr
+            .replace(/\n/g, ',') // Replace newlines with commas
+            .split(',')          // Split by comma
+            .map(key => key.trim()) // Trim whitespace from each key
+            .filter(key => key);    // Filter out any empty strings
+    
           if (oldKeys.length === 0) {
             skippedCount++;
             continue;
           }
           
-          // Add each old key mapping to the new key
+          // Add a mapping for each old key to the one new key
           oldKeys.forEach(oldKey => {
-            // Check if this mapping already exists
-            const existing = mappings.find(m => m.oldKey === oldKey);
-            if (existing) {
-              // Update existing mapping
-              existing.newKey = newKey;
-              existing.newName = `Imported Component (${newKey.substring(0, 8)}...)`;
-            } else {
-              // Add new mapping
-              mappings.push({
-                oldKey: oldKey,
-                newKey: newKey,
-                oldName: `Imported Component (${oldKey.substring(0, 8)}...)`,
-                newName: `Imported Component (${newKey.substring(0, 8)}...)`,
-                notes: ''
-              });
-            }
-            importedCount++;
+              addMapping(
+                  oldKey, 
+                  newKey, 
+                  componentName || `Imported (${oldKey.substring(0, 8)}...)`, // Use component name or a fallback
+                  componentName || `Imported (${newKey.substring(0, 8)}...)`
+              );
+              importedCount++;
           });
         }
         
@@ -1057,15 +1054,15 @@ statusEl.className = 'status-message info';
         // Show success message
         const statusEl = document.getElementById('statusMessage');
         statusEl.className = 'status-message success';
-        let message = `Successfully imported ${importedCount} mapping${importedCount !== 1 ? 's' : ''}`;
+        let message = `Successfully imported ${importedCount} mapping${importedCount !== 1 ? 's' : ''}.`;
         if (skippedCount > 0) {
-          message += ` (${skippedCount} row${skippedCount !== 1 ? 's' : ''} skipped)`;
+          message += ` ${skippedCount} row${skippedCount !== 1 ? 's' : ''} were skipped due to missing data.`;
         }
         statusEl.innerHTML = message;
         
         setTimeout(() => {
           updateStatus();
-        }, 3000);
+        }, 4000);
         
       } catch (error) {
         console.error('Error parsing CSV:', error);
