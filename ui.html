@@ -529,6 +529,7 @@
       <button class="btn" onclick="toggleManualInput()">📝 Paste Keys Manually</button>
       <button class="btn" onclick="importCSV()">📥 Import CSV</button>
       <button class="btn" id="generateVisualsBtn" onclick="generateVisuals()" style="display: none;">🎨 Generate Visuals</button>
+      <button class="btn" onclick="addComponentByKey()">🔍 Add Component by Key</button>
     </div>
 
     <div id="manualInput" class="manual-input">
@@ -892,6 +893,7 @@ statusEl.className = 'status-message info';
       
       header.textContent = title;
       textarea.value = text;
+      textarea.readOnly = true; // Ensure textarea is read-only for copy functionality
       modal.classList.add('active');
       
       setTimeout(() => {
@@ -1388,12 +1390,118 @@ statusEl.className = 'status-message info';
           }
           break;
           
+        case 'componentInsertionResult':
+          // Handle component insertion results
+          if (msg.success) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = 'status-message success';
+            let message = `Successfully inserted ${msg.insertedCount} component${msg.insertedCount !== 1 ? 's' : ''}`;
+            if (msg.errorCount > 0) {
+              message += ` (${msg.errorCount} failed)`;
+            }
+            statusEl.innerHTML = message;
+            
+            setTimeout(() => {
+              updateStatus();
+            }, 3000);
+          } else {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = 'status-message error';
+            statusEl.innerHTML = `Failed to insert components: ${msg.errors.join(', ')}`;
+            
+            setTimeout(() => {
+              updateStatus();
+            }, 3000);
+          }
+          break;
+          
 
         }
     };
 
     function copySpecificKeys(keys, type) {
       showCopyModal(keys, `${type} - Copy to clipboard:`);
+    }
+
+    function addComponentByKey() {
+      showAddComponentModal();
+    }
+
+    function showAddComponentModal() {
+      const modal = document.getElementById('copyModal');
+      const textarea = document.getElementById('copyTextArea');
+      const header = modal.querySelector('.copy-modal-header');
+      
+      header.textContent = 'Enter component key(s) to add:';
+      textarea.value = '';
+      textarea.placeholder = 'Enter component key(s) separated by commas\nExample: 1234567890abcdef,abcdef1234567890';
+      textarea.readOnly = false; // Make textarea editable
+      modal.classList.add('active');
+      
+      // Change the modal buttons for this use case
+      const actionsDiv = modal.querySelector('.copy-modal-actions');
+      actionsDiv.innerHTML = `
+        <button class="btn" onclick="closeAddComponentModal()">Cancel</button>
+        <button class="btn primary" onclick="insertComponentsFromKeys()">Add Components</button>
+      `;
+      
+      setTimeout(() => {
+        textarea.focus();
+      }, 100);
+    }
+
+    function closeAddComponentModal() {
+      const modal = document.getElementById('copyModal');
+      const textarea = document.getElementById('copyTextArea');
+      const actionsDiv = modal.querySelector('.copy-modal-actions');
+      
+      // Reset textarea to read-only for copy functionality
+      textarea.readOnly = true;
+      
+      // Reset modal buttons to original state
+      actionsDiv.innerHTML = `
+        <button class="btn" onclick="selectAllText()">Select All</button>
+        <button class="btn primary" onclick="closeCopyModal()">Done</button>
+      `;
+      
+      modal.classList.remove('active');
+    }
+
+    function insertComponentsFromKeys() {
+      const textarea = document.getElementById('copyTextArea');
+      const keys = textarea.value.trim();
+      
+      if (!keys) {
+        showAddComponentError('Please enter at least one component key');
+        return;
+      }
+      
+      // Split by commas and clean up
+      const componentKeys = keys.split(',').map(key => key.trim()).filter(key => key);
+      
+      if (componentKeys.length === 0) {
+        showAddComponentError('Please enter at least one valid component key');
+        return;
+      }
+      
+      // Send to plugin to insert components
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'insertComponentsByKeys', 
+          keys: componentKeys 
+        } 
+      }, '*');
+      
+      closeAddComponentModal();
+    }
+
+    function showAddComponentError(message) {
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.className = 'status-message error';
+      statusEl.innerHTML = message;
+      setTimeout(() => {
+        updateStatus();
+      }, 3000);
     }
   </script>
 </body>

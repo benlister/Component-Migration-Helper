@@ -22,6 +22,21 @@ interface ComponentInfo {
   key: string;
   name: string;
   id: string;
+  library?: string;
+}
+
+// Function to get library name from component key
+function getLibraryNameFromKey(componentKey: string): string {
+  try {
+    const fileKey = componentKey.split(':')[0];
+    
+    // For now, return the full file key as the library identifier
+    // This will show the actual library key without truncation
+    return fileKey;
+  } catch (error) {
+    console.log('Could not get library name for key:', componentKey, error);
+    return 'Unknown Library';
+  }
 }
 
 // Initialize by loading saved mappings
@@ -63,6 +78,10 @@ figma.ui.onmessage = async msg => {
       handleSelectionChange();
       break;
       
+    case 'insertComponentsByKeys':
+      await insertComponentsByKeys(msg.keys);
+      break;
+      
 
   }
 };
@@ -94,7 +113,8 @@ function handleSelectionChange() {
       componentInfo.push({
         key: componentKey,
         name: getComponentName(node),
-        id: node.id
+        id: node.id,
+        library: getLibraryNameFromKey(componentKey)
       });
     }
   }
@@ -123,6 +143,79 @@ function getComponentKey(node: SceneNode): string | null {
 
 function clearSelection() {
   figma.currentPage.selection = [];
+}
+
+// Insert components by their keys
+async function insertComponentsByKeys(keys: string[]) {
+  try {
+    const insertedComponents: SceneNode[] = [];
+    const errors: string[] = [];
+    
+    // Get cursor position or use viewport center
+    const viewportCenter = figma.viewport.center;
+    let currentX = viewportCenter.x;
+    let currentY = viewportCenter.y;
+    
+    for (const key of keys) {
+      try {
+        // Format the component key
+        const formattedKey = formatComponentKey(key);
+        
+        // Import the component
+        const component = await figma.importComponentByKeyAsync(formattedKey);
+        if (component) {
+          // Create instance
+          const instance = component.createInstance();
+          
+          // Position the instance
+          instance.x = currentX;
+          instance.y = currentY;
+          
+          // Add to inserted components
+          insertedComponents.push(instance);
+          
+          // Move position for next component (stack horizontally)
+          currentX += instance.width + 20;
+          
+          // If we've gone too far right, move to next row
+          if (currentX > viewportCenter.x + 400) {
+            currentX = viewportCenter.x;
+            currentY += instance.height + 20;
+          }
+        } else {
+          errors.push(`Could not import component with key: ${key}`);
+        }
+      } catch (error) {
+        console.error('Error importing component:', key, error);
+        errors.push(`Invalid component key: ${key}`);
+      }
+    }
+    
+    // Select all inserted components
+    if (insertedComponents.length > 0) {
+      figma.currentPage.selection = insertedComponents;
+      figma.viewport.scrollAndZoomIntoView(insertedComponents);
+    }
+    
+    // Send result back to UI
+    figma.ui.postMessage({
+      type: 'componentInsertionResult',
+      success: insertedComponents.length > 0,
+      insertedCount: insertedComponents.length,
+      errorCount: errors.length,
+      errors: errors
+    });
+    
+  } catch (error) {
+    console.error('Error in insertComponentsByKeys:', error);
+    figma.ui.postMessage({
+      type: 'componentInsertionResult',
+      success: false,
+      insertedCount: 0,
+      errorCount: 1,
+      errors: ['Failed to insert components']
+    });
+  }
 }
 // Get a readable component name
 function getComponentName(node: SceneNode): string {
@@ -277,7 +370,8 @@ async function generateVisualComparison(mappings: Mapping[]) {
         
         // Component key
         const oldKeyText = figma.createText();
-        oldKeyText.characters = `(${mapping.oldKey})`;
+        const oldLibraryName = getLibraryNameFromKey(mapping.oldKey);
+        oldKeyText.characters = `(${oldLibraryName})`;
         oldKeyText.fontSize = 12;
         oldKeyText.fontName = { family: "Inter", style: "Regular" };
         oldKeyText.fills = [{ type: 'SOLID', color: { r: 0.6, g: 0.6, b: 0.6 } }];
@@ -369,7 +463,8 @@ async function generateVisualComparison(mappings: Mapping[]) {
         
         // Component key
         const newKeyText = figma.createText();
-        newKeyText.characters = `(${mapping.newKey})`;
+        const newLibraryName = getLibraryNameFromKey(mapping.newKey);
+        newKeyText.characters = `(${newLibraryName})`;
         newKeyText.fontSize = 12;
         newKeyText.fontName = { family: "Inter", style: "Regular" };
         newKeyText.fills = [{ type: 'SOLID', color: { r: 0.6, g: 0.6, b: 0.6 } }];
