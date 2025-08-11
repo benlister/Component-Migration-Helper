@@ -63,18 +63,23 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
             break;
     }
 });
-// Ensure component key is properly formatted for import
-function formatComponentKey(key) {
-    // If already properly formatted (contains colons), return as-is
-    if (key.includes(':')) {
-        return key;
+function formatComponentKey(input) {
+    const raw = input.trim();
+    // if URL pasted, extract key param
+    if (raw.startsWith("http")) {
+        try {
+            const u = new URL(raw);
+            const k = u.searchParams.get("key");
+            if (k)
+                return k;
+        }
+        catch (_a) { }
     }
-    // If it's just a node ID, we need to add the file key
-    const fileKey = figma.fileKey;
-    if (fileKey) {
-        return `${fileKey}:${key}`;
+    // if fileKey:componentKey pasted, grab the right side
+    if (raw.includes(":")) {
+        return raw.split(":").pop().trim();
     }
-    return key;
+    return raw;
 }
 // Handle selection changes
 function handleSelectionChange() {
